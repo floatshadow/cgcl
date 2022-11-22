@@ -1,3 +1,11 @@
+# Config
+.vscode/
+.idea/
+
+# Build
+build/
+.cache/
+
 # Prerequisites
 *.d
 
