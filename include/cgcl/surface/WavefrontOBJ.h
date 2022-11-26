@@ -38,6 +38,7 @@ struct PolyCorner {
 struct PolyElem {
     int start_index_ = 0;
     int corner_count_ = 0; 
+    bool shaded_smooth_ = false;
 };
 
 struct Geometry {
@@ -70,7 +71,9 @@ private:
     void geom_add_vertex(GlobalVertices &global_vertices);
     void geom_add_vertex_normal(GlobalVertices &global_vertices);
     void geom_add_uv_vertex(GlobalVertices &global_vertices);
-    void geom_add_ploygon(Geometry &geom, GlobalVertices &global_vertices);
+    void geom_add_polygon(Geometry &geom, GlobalVertices &global_vertices, const bool shaded_smooth);
+    void geom_add_name(Geometry &geom);
+    bool geom_update_smooth();
 
     std::string filename_;
     std::string input_;

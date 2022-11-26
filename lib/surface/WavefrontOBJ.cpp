@@ -1,8 +1,6 @@
 #include "cgcl/surface/WavefrontOBJ.h"
 #include "cgcl/utils/logging.h"
 
-#include <glm/ext/quaternion_geometric.hpp>
-#include <glm/fwd.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
 #include <cstddef>
@@ -71,7 +69,7 @@ bool OBJParser::expectKeyword(const std::string_view keyword) {
     if (memcmp(input_.data() + index_, keyword.data(), keyword.size()) != 0) {
         return false;
     }
-    if (input_[keyword_len] > ' ') {
+    if (input_[index_ + keyword_len] > ' ') {
         return false;
     }
     index_ += keyword_len + 1;
@@ -88,8 +86,9 @@ void OBJParser::parse(Geometry &geometry, GlobalVertices &global_vertices) {
     
     std::getline(input_stream, input_, '\0');
 
+    bool state_smooth = false;
     n_line_ = 1;
-    for (;;) {
+    for (;index_ < input_.size(); ) {
         n_line_ += skipWhiteSpace();
         if (input_[index_] == '#')
             skipComment();
@@ -104,10 +103,41 @@ void OBJParser::parse(Geometry &geometry, GlobalVertices &global_vertices) {
         }
         if (input_[index_] == 'f') {
             if (expectKeyword("f")) {
-                geom_add_ploygon(geometry, global_vertices);
+                geom_add_polygon(geometry, global_vertices, state_smooth);
+            }
+        }
+        if (input_[index_] == 'o') {
+            if (expectKeyword("o")) {
+                geom_add_name(geometry);
+            }
+        }
+        if (input_[index_] == 's') {
+            if (expectKeyword("s")) {
+                state_smooth = geom_update_smooth();
             }
         }
     }
+}
+
+void OBJParser::geom_add_name(Geometry &geom) {
+    size_t name_end = input_.find('\n', index_);
+    if (name_end != std::string::npos) {
+        geom.geometry_name_ = input_.substr(index_, name_end - index_);
+        index_ = name_end;
+    }
+}
+
+bool OBJParser::geom_update_smooth() {
+    size_t end_line = input_.find('\n', index_);
+    std::string_view line(input_.c_str() + index_, end_line - index_);
+    if (line == "0" || line == "off" || line == "null") {
+        index_ = end_line;
+        return false;
+    }
+
+    int smooth = 0;
+    tryParseInt(smooth);
+    return smooth != 0;
 }
 
 #define parse_floats(p, count)                                                          \
@@ -142,15 +172,23 @@ void OBJParser::geom_add_uv_vertex(GlobalVertices &global_vertices) {
     global_vertices.uv_vertices.push_back(uv);
 }
 
-void OBJParser::geom_add_ploygon(Geometry &geom, GlobalVertices &global_vertices) {
+void OBJParser::geom_add_polygon(Geometry &geom, GlobalVertices &global_vertices,
+                                 const bool shaded_smooth) 
+{
     PolyElem curr_face;
+    curr_face.shaded_smooth_ = shaded_smooth;
+
     const int orig_corners_size = geom.face_corners_.size();
     curr_face.start_index_ = orig_corners_size;
 
-
     bool face_valid = true;
     /* Parse until new line*/
-    while (skipWhiteSpace() == 0) {
+    for (;;) {
+        if (auto new_lines = skipWhiteSpace()) {
+            n_line_ += new_lines;
+            break;
+        }
+
         PolyCorner corner;
         bool got_uv = false, got_normal = false;
         tryParseInt(corner.vert_index);
