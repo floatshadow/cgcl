@@ -19,8 +19,9 @@ void BezierSurface::render() {
 
 glm::vec3 BezierSurface::getPoint(float u, float v) const {
     glm::vec3 p(0.0);
+    // Bezier surface degree (n, m) is defined by (n+1, m+1) control points.
     for (int i = 0; i < n_us; ++i)
         for (int j = 0 ; j < n_vs; ++j) 
-            p += bernstein_poly(n_us, i, u) * bernstein_poly(n_vs, j, v) * ctrl_pts_[i * n_vs + j];
+            p += bernstein_poly(n_us - 1, i, u) * bernstein_poly(n_vs - 1, j, v) * ctrl_pts_[i * n_vs + j];
     return p;
 }

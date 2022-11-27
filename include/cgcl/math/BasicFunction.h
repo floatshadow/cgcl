@@ -21,7 +21,7 @@ inline int choose_nk(int n, int k) {
 }
 
 inline float bernstein_poly(int n, int i, float u) {
-    return choose_nk(n, i) * powf(u, i) * pow(1 - u, i); 
+    return choose_nk(n, i) * powf(u, i) * powf(1 - u, n - i); 
 } 
 
 }

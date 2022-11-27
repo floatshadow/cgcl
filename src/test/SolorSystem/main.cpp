@@ -8,6 +8,7 @@
 
 #include "cgcl/surface/WavefrontOBJ.h"
 #include "cgcl/mesh/Mesh.h"
+#include "cgcl/surface/Bezier.h"
 
 #include <iostream>
 #include <cmath>
@@ -139,6 +140,25 @@ int main() {
     auto mesh_ptr = cgcl::TriMesh::from_obj("car.obj");
     mesh_ptr->initGL();
 
+    std::vector<std::unique_ptr<cgcl::TriMesh>> car;
+    FILE *file = fopen("car.txt", "r");
+    assert(file != nullptr);
+    unsigned int n_bezier, u, v;
+    fscanf(file, "%d", &n_bezier);
+    for (int k = 0; k < n_bezier; ++k) {
+        fscanf(file, "%d%d", &u, &v);
+        std::vector<glm::vec3> ctrl_pts;
+        glm::vec3 pos;
+        for (int i = 0; i < u; ++i) {
+            for (int j = 0; j < v; ++j) {
+                fscanf(file, "%f%f%f", &pos.x, &pos.y, &pos.z);
+                ctrl_pts.push_back(pos);
+            }
+        }
+        auto mesh = cgcl::TriMesh::from_bezier(cgcl::BezierSurface{u, v, ctrl_pts});
+        mesh->initGL();
+        car.emplace_back(std::move(mesh));
+    }
 
     glEnable(GL_DEPTH_TEST); // Z buffer depth test.
     // glEnable(GL_LIGHT0);
@@ -210,6 +230,14 @@ int main() {
         glUniformMatrix4fv(model_loc, 1, GL_FALSE, glm::value_ptr(car_model));
         glUniform3fv(object_color_loc, 1, glm::value_ptr(car_color));
         mesh_ptr->render();
+
+        glm::mat4 bezier_car_model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 10.0f)) ;
+        glm::vec3 bezier_car_color(1.0f, 0.0f, 0.0f);
+        glUniformMatrix4fv(model_loc, 1, GL_FALSE, glm::value_ptr(bezier_car_model));
+        glUniform3fv(object_color_loc, 1, glm::value_ptr(bezier_car_color));
+        for (const auto &mesh : car) {
+            mesh->render();
+        }
         glfwSwapBuffers(window);
         glfwPollEvents();    
     }
