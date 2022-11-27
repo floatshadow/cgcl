@@ -32,17 +32,19 @@ public:
     // support one sub-mesh only.
     // std::vector<unsigned int> offsets_;
     // std::vector<unsigned int> counts_;
-protected:
+
     TriMesh(const std::vector<Vertex> &vertex, const std::vector<unsigned int> &indices)
         : global_vertices_(vertex), global_indices_(indices) {}
     TriMesh(std::vector<Vertex> &&vertex, std::vector<unsigned int> &&indices)
         : global_vertices_(vertex), global_indices_(indices) {}
-private:
+
+    void render();
+
     void initGL();
     void finishGL();
+private:
     bool need_rendering_ = false;
     unsigned int VAO, VBO, EBO;
-
 };
 
 } // end namespace cgcl

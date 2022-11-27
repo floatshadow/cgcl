@@ -1,6 +1,9 @@
 #include "cgcl/mesh/Mesh.h"
 #include "cgcl/surface/WavefrontOBJ.h"
 
+#include <glm/gtx/string_cast.hpp>
+#include "cgcl/utils/logging.h"
+
 #include <glad/glad.h>
 
 using namespace cgcl;
@@ -82,6 +85,13 @@ TriMesh::from_bezier(const BezierSurface &bezier) {
 }
 
 void TriMesh::initGL() {
+    LOG(INFO) << "TriMesh Init: ";
+    LOG(INFO) << "Totol Vertex: " << global_vertices_.size();
+    // for (const auto &vert : global_vertices_) {
+    //     std::cout << glm::to_string(vert.position_) << std::endl;
+    // }
+    LOG(INFO) << "Total Indices:" << global_indices_.size(); 
+
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
     glGenBuffers(1, &EBO);
@@ -104,6 +114,12 @@ void TriMesh::initGL() {
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void *)offsetof(Vertex, normal_));
 
     /* Unbind VAO */
+    glBindVertexArray(0);
+}
+
+void TriMesh::render() {
+    glBindVertexArray(VAO);
+    glDrawElements(GL_TRIANGLES, global_indices_.size(), GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
 }
 
