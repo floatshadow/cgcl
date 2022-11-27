@@ -10,7 +10,7 @@ using namespace cgcl;
 
 
 
-std::shared_ptr<TriMesh> 
+std::unique_ptr<TriMesh> 
 TriMesh::from_obj(const std::string &filename) {
     Geometry geometry;
     GlobalVertices global_vertices;
@@ -41,46 +41,49 @@ TriMesh::from_obj(const std::string &filename) {
         }
     }
 
-    auto mesh = std::make_shared<TriMesh>(std::move(vertex), std::move(indices));
+    auto mesh = std::make_unique<TriMesh>(std::move(vertex), std::move(indices));
     return mesh;
 }
 
-std::shared_ptr<TriMesh> 
+std::unique_ptr<TriMesh> 
 TriMesh::from_bezier(const BezierSurface &bezier) {
 
     std::vector<Vertex> vertex;
     std::vector<unsigned int> indices;
 
-    unsigned int u_mesh = bezier.n_us * 2;
-    unsigned int v_mesh = bezier.n_vs * 2;
-    float du = 1.0 / u_mesh;
-    float dv = 1.0 / v_mesh;
+    unsigned int u_mesh = bezier.n_us * 3;
+    unsigned int v_mesh = bezier.n_vs * 3;
+    float du = 1.0 / (u_mesh - 1);
+    float dv = 1.0 / (v_mesh - 1);
 
-    vertex.reserve(u_mesh * v_mesh);
-    indices.reserve(u_mesh * v_mesh * 2 * 3);
+    // vertex.resize(u_mesh * v_mesh);
+    // indices.resize(u_mesh * v_mesh * 2 * 3);
+    Vertex vert;
     for (int i = 0; i < u_mesh; ++i) {
         float u = du * i;
         for (int j = 0; j < v_mesh; ++j) {
             float v = dv * j;
-            vertex[i * v_mesh + j].position_ = bezier.getPoint(u, v);
+            glm::vec3 position = bezier.getPoint(u, v);
+            vert.position_ = position;
+            vertex.push_back(vert);
         }
     } 
 
-    for (int i = 0; i < u_mesh; ++i) {
-        for (int j = 0; j < v_mesh; ++j) {
+    for (int i = 0; i < u_mesh - 1; ++i) {
+        for (int j = 0; j < v_mesh - 1; ++j) {
             unsigned int dudv_index = i * v_mesh + j;
-            unsigned int start = dudv_index * 2;
-            indices[start * 2] = dudv_index;
-            indices[start * 2 + 1] = dudv_index + 1;
-            indices[start * 2 + 2] = dudv_index + v_mesh;
+            indices.push_back(dudv_index);
+            indices.push_back(dudv_index + 1);
+            indices.push_back(dudv_index + v_mesh);
 
-            indices[start * 2 + 3] = dudv_index + 1;
-            indices[start * 2 + 4] = dudv_index + v_mesh;
-            indices[start * 2 + 6] = dudv_index + v_mesh + 1;
+            indices.push_back(dudv_index + 1);
+            indices.push_back(dudv_index + v_mesh);
+            indices.push_back(dudv_index + v_mesh + 1);
         }
     }
 
-    auto mesh = std::make_shared<TriMesh>(std::move(vertex), std::move(indices));
+
+    auto mesh = std::make_unique<TriMesh>(std::move(vertex), std::move(indices));
     return mesh;
 }
 

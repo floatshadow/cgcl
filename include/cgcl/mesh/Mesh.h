@@ -21,8 +21,8 @@ struct Vertex {
 class TriMesh {
 public:
     TriMesh() = delete;
-    static std::shared_ptr<TriMesh> from_obj(const std::string &filename);
-    static std::shared_ptr<TriMesh> from_bezier(const BezierSurface &bezier);
+    static std::unique_ptr<TriMesh> from_obj(const std::string &filename);
+    static std::unique_ptr<TriMesh> from_bezier(const BezierSurface &bezier);
     /* A mesh may contain multiple sub-mesh and its own
      * vertex, index, uv and material, texture.
      */
