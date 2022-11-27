@@ -77,7 +77,7 @@ private:
 
     std::string filename_;
     std::string input_;
-    size_t index_;
+    size_t index_ = 0;
     size_t n_line_;
 };
 

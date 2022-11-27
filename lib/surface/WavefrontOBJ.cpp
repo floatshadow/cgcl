@@ -36,7 +36,7 @@ void OBJParser::tryParseFloat(float &dst) {
     size_t length = 0;
     if (index_ < input_.size()) {
         char *end = nullptr;
-        strtof(input_.data() + index_, &end);
+        dst = strtof(input_.data() + index_, &end);
         length = end - input_.data() - index_;
     }
     CHECK_NE(length, 0) << "parse float error at " << filename_ << ":" << n_line_; 
@@ -117,6 +117,10 @@ void OBJParser::parse(Geometry &geometry, GlobalVertices &global_vertices) {
             }
         }
     }
+
+    LOG(INFO) << "Read from: " << filename_;
+    LOG(INFO) << "Total Vertex: " << global_vertices.vertices.size();
+    LOG(INFO) << "Total Faces: " << geometry.face_elements_.size();
 }
 
 void OBJParser::geom_add_name(Geometry &geom) {
@@ -149,7 +153,6 @@ void OBJParser::geom_add_vertex(GlobalVertices &global_vertices) {
     glm::vec3 vert;
     parse_floats(glm::value_ptr(vert), 3);
     global_vertices.vertices.push_back(vert);
-
     // If there is newline after xyz, parse finished.
     // Otherwise, parse rgb data.
     if (auto new_lines = skipWhiteSpace()) {
