@@ -147,9 +147,9 @@ CHECK_FUNC(_NE, !=)
 #define CHECK_NE(x, y) CHECK_BINARY_OP(_NE, !=, x, y)
 
 
-#define LOG_FATAL LogFatal(__FILE__, __LINE__)
-#define LOG_INFO  Log("INFO", __FILE__, __LINE__)
-#define LOG_WARNING Log("Warning", __FILE__, __LINE__)
+#define LOG_FATAL LogFatal(__FILE_NAME__, __LINE__)
+#define LOG_INFO  Log("INFO", __FILE_NAME__, __LINE__)
+#define LOG_WARNING Log("Warning", __FILE_NAME__, __LINE__)
 #define LOG(severity) LOG_##severity.stream()
 
 #endif // LOGGING_H

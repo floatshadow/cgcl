@@ -10,8 +10,13 @@ find_package(glm REQUIRED)
 find_package(glfw3 REQUIRED)
 find_package(OpenMP REQUIRED)
 
-set(COMMON_INCLUDES ${CMAKE_SOURCE_DIR}/include ${GLM_INCLUDE_DIRS})
+set(COMMON_INCLUDES ${CMAKE_SOURCE_DIR}/include ${CMAKE_CURRENT_BINARY_DIR} ${GLM_INCLUDE_DIRS})
 include_directories(${COMMON_INCLUDES})
+
+configure_file(
+    include/cgcl/utils/config.h.in 
+    cgcl/config.h
+)
 
 if (CMAKE_BUILD_TYPE STREQUAL "")
     set(CMAKE_BUILD_TYPE Debug)

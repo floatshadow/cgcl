@@ -1,0 +1,8 @@
+
+namespace cgcl {
+namespace utils {
+
+const char *project_assets_root_dir = "${CMAKE_SOURCE_DIR}/assets";
+
+} // end namesoace utils
+} // end namespace cgcl
