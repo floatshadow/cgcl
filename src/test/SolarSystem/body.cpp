@@ -1,9 +1,7 @@
 #include "body.h"
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-#include <glm/fwd.hpp>
 #include <glm/gtx/string_cast.hpp>
-#include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
 #include <math.h>
@@ -19,7 +17,7 @@ Body::Body(const glm::vec3 &center, float radis, float speed, const glm::vec3 &c
 {
     n_vertex_ = N * N;
     n_triangles_ = N * (N-1) * 2;
-    vertex_.reserve(n_vertex_ * 3);
+    vertex_.reserve(n_vertex_);
     indices_.reserve(n_triangles_ * 3);
     if (glm::length(axis) > 1e-4) 
         need_orbit_ = true; 
@@ -41,14 +39,16 @@ void Body::InitGLObjects() {
     glBindVertexArray(VAO);
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO); // now operation to GL_ARRAY_BUFFER will sets VBO.
-    glBufferData(GL_ARRAY_BUFFER, n_vertex_ * 3 * sizeof(float), vertex_.data(), GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, n_vertex_ * sizeof(Vertex), vertex_.data(), GL_STATIC_DRAW);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, n_triangles_ * 3 * sizeof(unsigned int), indices_.data(), GL_DYNAMIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, n_triangles_ * 3 * sizeof(unsigned int), indices_.data(), GL_STATIC_DRAW);
     /* Link vertex attribute */
     /* VBO is a buffer handler, attribute got its data from VBO which binded to GL_ARRAY_BUFFER */
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void *)0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void *)offsetof(Vertex, normal_));
     /* enable position 0 attribute */
     glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(1);
     
     /* Unbind */
     glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -69,17 +69,20 @@ void Body::InitBufferData() {
         double theta = i * dtheta;
         for (int j = 0; j < N; ++j) {
             double phi = dphi * (j + 1);
-            int vertex_index = (longitude_index + j) * 3;
-            vertex_[vertex_index    ] = radis_ * sin(phi) * cos(theta); // x
-            vertex_[vertex_index + 1] = radis_ * cos(phi); // y
-            vertex_[vertex_index + 2] = -radis_ * sin(phi) * sin(theta); // z
+            int vertex_index = longitude_index + j;
+            vertex_[vertex_index].pos_ = glm::vec3(
+                radis_ * sin(phi) * cos(theta), // x;
+                radis_ * cos(phi), // y
+                -radis_ * sin(phi) * sin(theta) // z
+            );
+            vertex_[vertex_index].normal_ = glm::normalize(
+                glm::vec3(vertex_[vertex_index].pos_)
+            );
         }
     }
 #pragma parallel for
     for (int i = 0; i < n_vertex_; ++i) {
-        vertex_[i * 3] += center_.x;
-        vertex_[i * 3 + 1] += center_.y;
-        vertex_[i * 3 + 2] += center_.z;
+        vertex_[i].pos_ += center_;
     }
 
     /* triangle split sphere */
@@ -141,7 +144,7 @@ void Body::unbind() {
 #ifndef NDEBUG
 void Body::debug(glm::mat4 transform) {
     std::cout << n_vertex_ << " " << n_triangles_ << std::endl;
-    glm::vec4 test = glm::vec4(vertex_[0], vertex_[1], vertex_[2], 1.0f);
+    glm::vec4 test = glm::vec4(vertex_[0].pos_, 1.0f);
     std::cout << test.x << " " << test.y << " " << test.z << " " << test.w << std::endl;
     test = transform * test;
     std::cout << test.x << " " << test.y << " " << test.z << " " << test.w << std::endl;
@@ -149,7 +152,7 @@ void Body::debug(glm::mat4 transform) {
         std::cout << indices_[i*3] << " " << indices_[i*3+1] << " " << indices_[i*3+2] << std::endl;
     }
     for (int i = 0; i < n_vertex_; ++i) {
-        std::cout << vertex_[i*3] << " " << vertex_[i*3+1] << " " << vertex_[i*3+2] << std::endl;
+        std::cout << glm::to_string(vertex_[i].pos_) << std::endl;
     }
 }
 #endif

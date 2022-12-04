@@ -9,12 +9,14 @@
 #include "cgcl/surface/WavefrontOBJ.h"
 #include "cgcl/mesh/Mesh.h"
 #include "cgcl/surface/Bezier.h"
+#include "cgcl/utils/Loader.h"
+#include "cgcl/platform/OpenGL/GLShader.h"
+#include "cgcl/mesh/PhongMaterial.h"
 
 #include <iostream>
 #include <cmath>
 #include <math.h>
 
-#include "shader.h"
 #include "body.h"
 
 // camera argument; World coordinate as unit.
@@ -107,17 +109,11 @@ int main() {
     }  
 
     /* Load and Compile shaders */
-    Shader vertex, fragment;
-    vertex.read_and_compile(GL_VERTEX_SHADER, "vertex.glsl");
-    fragment.read_and_compile(GL_FRAGMENT_SHADER, "frag.glsl");
 
-    ShaderProgram program;
-    program.create_program();
-    program.attach_shader(vertex.ID_);
-    program.attach_shader(fragment.ID_);
-    program.safe_link();
-    vertex.delete_shader();
-    fragment.delete_shader();
+    cgcl::GLShader program(
+        cgcl::Loader::readFromRelative("shader/bling-phong/vertex.glsl"),
+        cgcl::Loader::readFromRelative("shader/bling-phong/frag.glsl")
+    );
 
     /* Wireframe Mode */
     // glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -136,6 +132,18 @@ int main() {
                 glm::vec3(25.0f, 0.0f, -10.0f),
             glm::vec3(1.0f, 0.0f, 0.0f));
 
+    /* Set up point light source */
+    program.Bind();
+    program.updateUniformFloat3("light.pos", glm::vec3(0.0f, 0.0f, 5.0f));
+    program.updateUniformFloat3("light.Ia", glm::vec3(0.2f, 0.2f, 0.2f));
+    program.updateUniformFloat3("light.Id", glm::vec3(0.5f, 0.5f, 0.5f)); 
+    program.updateUniformFloat3("light.Is", glm::vec3(1.0f, 1.0f, 1.0f));
+    /* Set up body material */
+    cgcl::PhongMaterial sun_material(glm::vec3(1.0f, 0.5f,0.2f));
+    cgcl::PhongMaterial earth_material(glm::vec3(0.2f, 0.2f, 1.0f));
+    cgcl::PhongMaterial venus_material(glm::vec3(1.0f, 0.84f, 0.5f));
+    cgcl::PhongMaterial moon_material(glm::vec3(0.5f, 0.5f, 0.5f));
+    cgcl::PhongMaterial car_material(glm::vec3(1.0f, 0.0f, 0.0f));
 
     auto mesh_ptr = cgcl::TriMesh::from_obj("car.obj");
     mesh_ptr->initGL();
@@ -170,11 +178,11 @@ int main() {
         last_frame = current_frame;
         key_callback(window);
         /* Render background color */
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         
-        glUseProgram(program.ID_);
-
+        program.Bind();
+        program.updateUniformFloat3("view_pos", e);
         // /* Global transform from world coord -> camera coord -> viewport */
         // /* This tansfrom will as a uniform attribute and utilize the parallelism of GPU */
 
@@ -188,53 +196,54 @@ int main() {
                                                 0.1f, 100.0f);
 
         /* Set view and projection matrix */
-        unsigned int view_loc = glGetUniformLocation(program.ID_, "view");
-        unsigned int projection_loc = glGetUniformLocation(program.ID_, "projection");
-        glUniformMatrix4fv(view_loc, 1, GL_FALSE, glm::value_ptr(view));
-        glUniformMatrix4fv(projection_loc, 1, GL_FALSE, glm::value_ptr(projection));
 
-        unsigned int model_loc = glGetUniformLocation(program.ID_, "model");
-        unsigned int object_color_loc = glGetUniformLocation(program.ID_, "object_color");
+
+        program.updateUniformMat4("view", view);
+        program.updateUniformMat4("projection", projection);
+
 
         glm::mat4 sun_model = Sun.update_model(glm::mat4(1.0f));
-        glUniformMatrix4fv(model_loc, 1, GL_FALSE, glm::value_ptr(sun_model));
-        glUniform3fv(object_color_loc, 1, Sun.getColor());
+        program.updateUniformMat4("model", sun_model);
+        sun_material.updateBareMaterial(program);
+        //program.updateUniformFloat3v("object_color", 1, Sun.getColor());
         Sun.bind_and_draw();
         Sun.unbind();
 
         glm::mat4 earth_model =  Earth.update_model(glm::mat4(1.0f));
         float angle = Earth.getAngle();
         // std::cout << glm::to_string(model) << std::endl;
-        glUniformMatrix4fv(model_loc, 1, GL_FALSE, glm::value_ptr(earth_model));
-        glUniform3fv(object_color_loc, 1, Earth.getColor());
+        program.updateUniformMat4("model", earth_model);
+        earth_material.updateBareMaterial(program);
+        //program.updateUniformFloat3v("object_color", 1, Earth.getColor());
         Earth.bind_and_draw();
         Earth.unbind();
 
         glm::mat4 venus_model =  Venus.update_model(glm::mat4(1.0f));
         // std::cout << glm::to_string(model) << std::endl;
-        glUniformMatrix4fv(model_loc, 1, GL_FALSE, glm::value_ptr(venus_model));
-        glUniform3fv(object_color_loc, 1, Venus.getColor());
+        program.updateUniformMat4("model", venus_model);
+        venus_material.updateBareMaterial(program);
+        //program.updateUniformFloat3v("object_color", 1, Venus.getColor());
         Venus.bind_and_draw();
         Venus.unbind();
 
         glm::mat4 moon_model =  Moon.update_model(earth_model, angle);
         // std::cout << glm::to_string(model) << std::endl;
-        glUniformMatrix4fv(model_loc, 1, GL_FALSE, glm::value_ptr(moon_model));
-        glUniform3fv(object_color_loc, 1, Moon.getColor());
+        program.updateUniformMat4("model", moon_model);
+        moon_material.updateBareMaterial(program);
+        //program.updateUniformFloat3v("object_color", 1, Moon.getColor());
         Moon.bind_and_draw();
         Moon.unbind();
 
-        
+
         glm::mat4 car_model = glm::translate(glm::mat4(1.0f), glm::vec3(20.0f, 0.0f, 0.0f)) ;
-        glm::vec3 car_color(1.0f, 0.0f, 0.0f);
-        glUniformMatrix4fv(model_loc, 1, GL_FALSE, glm::value_ptr(car_model));
-        glUniform3fv(object_color_loc, 1, glm::value_ptr(car_color));
+        car_material.updateBareMaterial(program);
+        program.updateUniformMat4("model", car_model);
+        //program.updateUniformFloat3("object_color", car_color);
         mesh_ptr->render();
 
         glm::mat4 bezier_car_model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 10.0f)) ;
-        glm::vec3 bezier_car_color(1.0f, 0.0f, 0.0f);
-        glUniformMatrix4fv(model_loc, 1, GL_FALSE, glm::value_ptr(bezier_car_model));
-        glUniform3fv(object_color_loc, 1, glm::value_ptr(bezier_car_color));
+        program.updateUniformMat4("model", bezier_car_model);
+        // program.updateUniformFloat3("object_color", bezier_car_color);
         for (const auto &mesh : car) {
             mesh->render();
         }

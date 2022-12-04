@@ -9,6 +9,12 @@
 /// \file body.h
 /// \brief Body Class for star, planet and satellite.
 
+struct Vertex {
+    glm::vec3 pos_;
+    glm::vec3 normal_;
+    glm::vec2 tex_coord_;
+};
+
 class Body {
 public:
     Body() = delete;
@@ -43,7 +49,7 @@ private:
     unsigned int n_triangles_;
     bool need_orbit_ = false;
     bool need_rotation_ = false;
-    std::vector<float> vertex_;
+    std::vector<Vertex> vertex_;
     std::vector<unsigned int> indices_;
 };
 
