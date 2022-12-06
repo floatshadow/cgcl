@@ -4,7 +4,6 @@
 add_executable(SolarSystem 
     body.cpp 
     main.cpp 
-    shader.cpp
 )
 
 

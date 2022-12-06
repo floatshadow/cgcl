@@ -17,6 +17,7 @@ public:
                  float decay = 16.0f)
         : Ka_(Ka), Kd_(Kd), Ks_(Ks), decay_(decay) {} 
     void updateBareMaterial(GLShader &shader);
+    void updateLightingMapMaterial(GLShader &shader, unsigned int texture_group_id);
 
     glm::vec3 Ka_;
     glm::vec3 Kd_;

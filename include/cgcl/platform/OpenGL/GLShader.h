@@ -15,6 +15,7 @@ public:
     void Bind() const;
     void UnBind() const;
 
+    void updateUniformInt(const std::string &name, const int);
     void updateUniformFloat(const std::string &name, const float);
     void updateUniformFloat3(const std::string &name, const glm::vec3 &vec);
     void updateUniformFloat3v(const std::string &name, unsigned count, const float *value);

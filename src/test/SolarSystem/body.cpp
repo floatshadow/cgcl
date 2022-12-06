@@ -9,7 +9,7 @@
 #include <ostream>
 
 
-Body::Body(const glm::vec3 &center, float radis, float speed, const glm::vec3 &color,
+Body::Body(const glm::vec3 &center, float radis, float speed, const glm::vec3 &color, bool reverse_norm,
            const glm::vec3 &orbit_center,
            const glm::vec3 &axis)
     : center_(center), radis_(radis), speed_(speed), color_(color),
@@ -22,6 +22,10 @@ Body::Body(const glm::vec3 &center, float radis, float speed, const glm::vec3 &c
     if (glm::length(axis) > 1e-4) 
         need_orbit_ = true; 
     InitBufferData();
+    if (reverse_norm) {
+        for (int i = 0; i < n_vertex_; ++i)
+            vertex_[i].normal_ = -vertex_[i].normal_;
+    }
     InitGLObjects();
 }
 
@@ -46,9 +50,11 @@ void Body::InitGLObjects() {
     /* VBO is a buffer handler, attribute got its data from VBO which binded to GL_ARRAY_BUFFER */
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void *)0);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void *)offsetof(Vertex, normal_));
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void *)offsetof(Vertex, tex_coord_));
     /* enable position 0 attribute */
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
+    glEnableVertexAttribArray(2);
     
     /* Unbind */
     glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -78,6 +84,7 @@ void Body::InitBufferData() {
             vertex_[vertex_index].normal_ = glm::normalize(
                 glm::vec3(vertex_[vertex_index].pos_)
             );
+            vertex_[vertex_index].tex_coord_ = glm::vec2(theta / (2 * PI), phi / PI);
         }
     }
 #pragma parallel for

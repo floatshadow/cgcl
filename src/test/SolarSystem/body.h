@@ -18,7 +18,7 @@ struct Vertex {
 class Body {
 public:
     Body() = delete;
-    Body(const glm::vec3 &center, float radis, float speed, const glm::vec3 &color,
+    Body(const glm::vec3 &center, float radis, float speed, const glm::vec3 &color, bool reverse_norm = false,
          const glm::vec3 &orbit_center = glm::vec3(0.0f, 0.0f, 0.0f),
          const glm::vec3 &axis = glm::vec3(0.0f, 0.0f, 0.0f));
     ~Body();

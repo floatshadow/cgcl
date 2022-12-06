@@ -66,6 +66,11 @@ void GLShader::UnBind() const {
     glUseProgram(render_id_);
 }
 
+void GLShader::updateUniformInt(const std::string &name, const int value) {
+    GLint location = glGetUniformLocation(render_id_, name.c_str());
+    glUniform1i(location, value);
+}
+
 void GLShader::updateUniformFloat(const std::string &name, const float value) {
     GLint location = glGetUniformLocation(render_id_, name.c_str());
     glUniform1f(location, value);
