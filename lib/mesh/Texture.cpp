@@ -32,7 +32,7 @@ void Texture::LoadTexture(const std::string &file_path) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, DEFAULT_TEXTURE_FILTER);
 
     int width, height, channels;
-    stbi_set_flip_vertically_on_load(true);
+    stbi_set_flip_vertically_on_load(false);
     unsigned char *data = stbi_load(
         file_path.c_str(),
         &width, &height, &channels, 0
@@ -49,7 +49,7 @@ void Texture::LoadTexture(const std::string &file_path) {
     stbi_image_free(data);
 }
 
-void Texture::BindTexture() {
+void Texture::BindTexture() const {
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture_id_);
     // LOG(INFO) << "Bind texture ID: " <<  texture_id_;

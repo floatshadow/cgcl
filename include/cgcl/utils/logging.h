@@ -129,13 +129,13 @@ CHECK_FUNC(_NE, !=)
 
 #define CHECK_BINARY_OP(name, op, x, y)                                             \
     if (!LogCheck##name(x, y))                                                      \
-        LogFatal(__FILE__, __LINE__).stream()                                       \
+        LogFatal(__FILE_NAME__, __LINE__).stream()                                  \
             <<  "Check failed : "   << #x " " #op " " #y << "\n"                    \
             << BackTrace() << ":"                                                   \
 
 #define CHECK(x)                                                                    \
     if (!(x))                                                                      \
-        LogFatal(__FILE__, __LINE__).stream()                                       \
+        LogFatal(__FILE_NAME__, __LINE__).stream()                                  \
             << "Check failed : " << #x << "\n"                                      \
             << BackTrace() << ":"                                                   
 
@@ -151,5 +151,7 @@ CHECK_FUNC(_NE, !=)
 #define LOG_INFO  Log("INFO", __FILE_NAME__, __LINE__)
 #define LOG_WARNING Log("Warning", __FILE_NAME__, __LINE__)
 #define LOG(severity) LOG_##severity.stream()
+
+#define cgcl_unreachable(msg) LOG(FATAL) << msg
 
 #endif // LOGGING_H
