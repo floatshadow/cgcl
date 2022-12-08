@@ -4,10 +4,10 @@
 using namespace cgcl;
 
 int main(int argc, char **argv) {
-    Geometry geom;
+    std::vector<std::unique_ptr<Geometry>> geom;
     GlobalVertices verteces;
     OBJParser importer(argv[1]);
     importer.parse(geom, verteces);
 
-    CHECK_EQ(geom.geometry_name_, "car");
+    CHECK_EQ(geom[0]->geometry_name_, "car");
 }

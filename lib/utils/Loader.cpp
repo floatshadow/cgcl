@@ -17,6 +17,20 @@ std::string Loader::getAssetPath(const std::string &relative_path) {
     return assets_file_path.string();
 }
 
+std::string Loader::getParentPath(const std::string &file_path) {
+    path file(file_path);
+    CHECK(exists(file)) << "Failed to locate " << file_path;
+    if (!file.has_filename()) {
+        LOG(WARNING) << "Expect a file path, but find " << file_path;
+    }
+    return file.parent_path().string();
+}
+
+std::string Loader::getFileFromPath(const std::string &filename, const std::string &file_path) {
+    path file_path_dir(file_path);
+    CHECK(exists(file_path_dir)) << "Failed to locate " << file_path;
+    return file_path_dir.append(filename).string();
+}
 
 std::string Loader::readFromRelative(const std::string &relative_path) {
     auto absolute_path = getAssetPath(relative_path);

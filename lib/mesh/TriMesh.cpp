@@ -12,7 +12,7 @@ using namespace cgcl;
 
 std::unique_ptr<Mesh> 
 TriMesh::from_obj(const std::string &filename) {
-    Geometry geometry;
+    std::vector<std::unique_ptr<Geometry>> geometry;
     GlobalVertices global_vertices;
 
     OBJParser parser(filename);
@@ -30,14 +30,16 @@ TriMesh::from_obj(const std::string &filename) {
         vertex[i].position_ = global_vertices.vertices[i];
     }
 
-    for (const auto &face : geometry.face_elements_) {
-        for (int n_corners = 0; n_corners < face.corner_count_; ++n_corners) {
-            const auto &corner = geometry.face_corners_[face.start_index_ + n_corners];
-            int normal_index = corner.vertex_normal_index;
-            int vertex_index = corner.vert_index;
-            /* unormalized normal vector */
-            vertex[vertex_index].normal_ += global_vertices.vertex_normals[normal_index];
-            indices.push_back(vertex_index);
+    for (const auto &geom: geometry) {
+        for (const auto &face : geom->face_elements_) {
+            for (int n_corners = 0; n_corners < face.corner_count_; ++n_corners) {
+                const auto &corner = geom->face_corners_[face.start_index_ + n_corners];
+                int normal_index = corner.vertex_normal_index;
+                int vertex_index = corner.vert_index;
+                /* unormalized normal vector */
+                vertex[vertex_index].normal_ += global_vertices.vertex_normals[normal_index];
+                indices.push_back(vertex_index);
+            }
         }
     }
 
