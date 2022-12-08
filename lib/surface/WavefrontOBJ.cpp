@@ -18,11 +18,11 @@ static inline bool is_whitespace(char c) {
     return c <= ' '; // treate ASCII control chars as white space.
 }
 
-std::size_t OBJParser::skipWhiteSpace() {
+static std::size_t skipWhiteSpace(const std::string &input, size_t &index) {
     size_t new_lines = 0;
-    for (; index_ < input_.size() && is_whitespace(input_[index_]); ++index_) {
-        if ((index_ + 1 < input_.size() && input_[index_] == '\r' && input_[index_ + 1] == '\n') ||
-          input_[index_] == '\r' || input_[index_] == '\n')
+    for (; index < input.size() && is_whitespace(input[index]); ++index) {
+        if ((index + 1 < input.size() && input[index] == '\r' && input[index + 1] == '\n') ||
+          input[index] == '\r' || input[index] == '\n')
         new_lines++;
     }
     return new_lines;
@@ -32,47 +32,54 @@ void OBJParser::skipComment() {
     for (; index_ < input_.size() && input_[index_] != '\n'; index_++); 
 }
 
-void OBJParser::tryParseFloat(float &dst) {
+static size_t tryParseFloat(const std::string &input, size_t index, float &dst) {
     size_t length = 0;
-    if (index_ < input_.size()) {
+    if (index < input.size()) {
         char *end = nullptr;
-        dst = strtof(input_.data() + index_, &end);
-        length = end - input_.data() - index_;
+        dst = strtof(input.data() + index, &end);
+        length = end - input.data() - index;
     }
-    CHECK_NE(length, 0) << "parse float error at " << filename_ << ":" << n_line_; 
-    index_ += length;
+    CHECK_NE(length, 0) << "parse float error at " << index;
+    return index + length;
 }
 
 
-void OBJParser::tryParseInt(int &dst) {
+static size_t tryParseInt(const std::string &input, size_t index, int &dst) {
     size_t length = 0;
-    if (index_ < input_.size()) {
+    if (index < input.size()) {
         char *end = nullptr;
-        dst = strtol(input_.data() + index_, &end, 0);
-        length =  end - input_.data() - index_;
+        dst = strtol(input.data() + index, &end, 0);
+        length =  end - input.data() - index;
     }
-    CHECK_NE(length, 0) << "parse int error at " << filename_ << ":" << n_line_; 
-    index_ += length;
+    CHECK_NE(length, 0) << "parse int error at " << index;
+    return index + length;
 }
 
 
-bool OBJParser::startWith(const std::string_view s) {
-    return (input_.size() - index_ >= s.length()) && 
-        (memcmp(s.data(), input_.data() + index_, s.length()) == 0);
+static size_t tryParseString(const std::string &input, size_t index, std::string_view &name) {
+    size_t name_end = input.find('\n', index);
+    CHECK_NE(name_end, std::string::npos) << "Expect name";
+    name = std::string_view(input).substr(index, name_end-index);
+    return name_end;
 }
 
-bool OBJParser::expectKeyword(const std::string_view keyword) {
+static bool startWith(const std::string &input, size_t index, const std::string_view s) {
+    return (input.size() - index >= s.length()) && 
+        (memcmp(s.data(), input.data() + index, s.length()) == 0);
+}
+
+static bool expectKeyword(const std::string &input, size_t &index, const std::string_view keyword) {
     size_t keyword_len = keyword.size();
-    if (input_.size() - index_ < keyword_len + 1) {
+    if (input.size() - index < keyword_len + 1) {
         return false;
     }
-    if (memcmp(input_.data() + index_, keyword.data(), keyword.size()) != 0) {
+    if (memcmp(input.data() + index, keyword.data(), keyword.size()) != 0) {
         return false;
     }
-    if (input_[index_ + keyword_len] > ' ') {
+    if (input[index + keyword_len] > ' ') {
         return false;
     }
-    index_ += keyword_len + 1;
+    index += keyword_len + 1;
     return true;
 }
 
@@ -89,32 +96,36 @@ void OBJParser::parse(Geometry &geometry, GlobalVertices &global_vertices) {
     bool state_smooth = false;
     n_line_ = 1;
     for (;index_ < input_.size(); ) {
-        n_line_ += skipWhiteSpace();
+        n_line_ += skipWhiteSpace(input_, index_);
         if (input_[index_] == '#')
             skipComment();
-        if (input_[index_] == 'v') {
-            if (expectKeyword("v")) {
+        else if (input_[index_] == 'v') {
+            if (expectKeyword(input_, index_, "v")) {
                 geom_add_vertex(global_vertices);
-            } else if (expectKeyword("vt")) {
+            } else if (expectKeyword(input_, index_, "vt")) {
                 geom_add_uv_vertex(global_vertices);
-            } else if (expectKeyword("vn")) {
+            } else if (expectKeyword(input_, index_, "vn")) {
                 geom_add_vertex_normal(global_vertices);
             }
         }
-        if (input_[index_] == 'f') {
-            if (expectKeyword("f")) {
+        else if (input_[index_] == 'f') {
+            if (expectKeyword(input_, index_, "f")) {
                 geom_add_polygon(geometry, global_vertices, state_smooth);
             }
         }
-        if (input_[index_] == 'o') {
-            if (expectKeyword("o")) {
+        else if (input_[index_] == 'o') {
+            if (expectKeyword(input_, index_, "o")) {
                 geom_add_name(geometry);
             }
         }
-        if (input_[index_] == 's') {
-            if (expectKeyword("s")) {
+        else if (input_[index_] == 's') {
+            if (expectKeyword(input_, index_, "s")) {
                 state_smooth = geom_update_smooth();
             }
+        }
+        /* Material */
+        else if (expectKeyword(input_, index_, "usemtl")) {
+            
         }
     }
 
@@ -140,22 +151,22 @@ bool OBJParser::geom_update_smooth() {
     }
 
     int smooth = 0;
-    tryParseInt(smooth);
+    index_ = tryParseInt(input_, index_, smooth);
     return smooth != 0;
 }
 
-#define parse_floats(p, count)                                                          \
+#define parse_floats(input, index, p, count)                                            \
     for (int i = 0; i < count; ++i) {                                                   \
-        tryParseFloat(p[i]);                                                            \
+        index = tryParseFloat(input, index, p[i]);                                     \
     }                                                                                   \
 
 void OBJParser::geom_add_vertex(GlobalVertices &global_vertices) {
     glm::vec3 vert;
-    parse_floats(glm::value_ptr(vert), 3);
+    parse_floats(input_, index_, glm::value_ptr(vert), 3);
     global_vertices.vertices.push_back(vert);
     // If there is newline after xyz, parse finished.
     // Otherwise, parse rgb data.
-    if (auto new_lines = skipWhiteSpace()) {
+    if (auto new_lines = skipWhiteSpace(input_, index_)) {
         n_line_ += new_lines;
         return;
     }
@@ -164,14 +175,14 @@ void OBJParser::geom_add_vertex(GlobalVertices &global_vertices) {
 
 void OBJParser::geom_add_vertex_normal(GlobalVertices &global_vertices) {
     glm::vec3 normal;
-    parse_floats(glm::value_ptr(normal), 3);
+    parse_floats(input_, index_, glm::value_ptr(normal), 3);
     glm::normalize(normal);
     global_vertices.vertex_normals.push_back(normal);
 }
 
 void OBJParser::geom_add_uv_vertex(GlobalVertices &global_vertices) {
     glm::vec2 uv;
-    parse_floats(glm::value_ptr(uv), 2);
+    parse_floats(input_, index_, glm::value_ptr(uv), 2);
     global_vertices.uv_vertices.push_back(uv);
 }
 
@@ -187,25 +198,25 @@ void OBJParser::geom_add_polygon(Geometry &geom, GlobalVertices &global_vertices
     bool face_valid = true;
     /* Parse until new line*/
     for (;;) {
-        if (auto new_lines = skipWhiteSpace()) {
+        if (auto new_lines = skipWhiteSpace(input_, index_)) {
             n_line_ += new_lines;
             break;
         }
 
         PolyCorner corner;
         bool got_uv = false, got_normal = false;
-        tryParseInt(corner.vert_index);
+        index_ = tryParseInt(input_, index_, corner.vert_index);
         if (input_[index_] == '/') {
             ++index_;
             /* UV index */
             if (input_[index_] != '/') {
-                tryParseInt(corner.uv_vert_index);
+                index_ = tryParseInt(input_, index_, corner.uv_vert_index);
                 got_uv = true;
             }
             /* normal index */
             if (input_[index_] == '/') {
                 ++index_;
-                tryParseInt(corner.vertex_normal_index);
+                index_ = tryParseInt(input_, index_, corner.vertex_normal_index);
                 got_normal = true;
             }
         }
@@ -227,7 +238,7 @@ void OBJParser::geom_add_polygon(Geometry &geom, GlobalVertices &global_vertices
         if (got_normal && !global_vertices.vertex_normals.empty()) {
             corner.vertex_normal_index += -1;
             CHECK_GE(corner.vertex_normal_index, 0);
-            CHECK_LE(corner.vertex_normal_index, global_vertices.uv_vertices.size());
+            CHECK_LT(corner.vertex_normal_index, global_vertices.vertex_normals.size());
         }
         geom.face_corners_.push_back(corner);
         curr_face.corner_count_++;
@@ -236,4 +247,9 @@ void OBJParser::geom_add_polygon(Geometry &geom, GlobalVertices &global_vertices
 
     geom.face_elements_.push_back(curr_face);
     
+}
+
+
+void MTLParser::parse(std::map<std::string, std::unique_ptr<MTLMaterial>> &materials) {
+
 }

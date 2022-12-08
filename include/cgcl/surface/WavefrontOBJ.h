@@ -8,6 +8,8 @@
 #include <set>
 #include <string>
 #include <string_view>
+#include <memory>
+#include <map>
 
 namespace cgcl {
 
@@ -62,12 +64,7 @@ public:
     OBJParser(const std::string filename) : filename_(filename) {}
     void parse(Geometry &geometry, GlobalVertices &global_vertices);
 private:
-    size_t skipWhiteSpace();
     void skipComment();
-    bool expectKeyword(const std::string_view keyword);
-    void tryParseInt(int &dst);
-    void tryParseFloat(float &dst);
-    bool startWith(const std::string_view s);
     void geom_add_vertex(GlobalVertices &global_vertices);
     void geom_add_vertex_normal(GlobalVertices &global_vertices);
     void geom_add_uv_vertex(GlobalVertices &global_vertices);
@@ -79,6 +76,28 @@ private:
     std::string input_;
     size_t index_ = 0;
     size_t n_line_;
+};
+
+struct MTLMaterial {
+    std::string name_;
+    glm::vec3 Ka_; // ambient color of material
+    glm::vec3 Kd_; // diffuse color of material
+    glm::vec3 Ks_; // specular color of material
+    float Ns_; // specular expoent, range between 0 and 1000
+    float Ni_ = 1.0f; // refraction, range from 0.001 and 10, 1.0 means no refraction
+    float d = 1.0f; // transparent
+    std::string map_Ka_;
+    std::string map_Kb_;
+    std::string map_Ks_;
+};
+
+class MTLParser {
+public:
+    void parse(std::map<std::string, std::unique_ptr<MTLMaterial>> &materials);
+private:
+    std::string mtl_file_path;
+    std::string input_;
+    size_t index_;
 };
 
 } // end namespace cgcl
